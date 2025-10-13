@@ -515,7 +515,7 @@ class MyCustomNode(FactorNode):
 ### 联系方式
 
 - 提交问题：[GitHub Issues](https://github.com/yourusername/FactorLab/issues)
-- 邮件联系：your.email@example.com
+- 邮件联系：yusenjia6@gmail.com
 
 ---
 
