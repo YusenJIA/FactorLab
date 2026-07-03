@@ -1,0 +1,19 @@
+apiVersion: 1
+
+datasources:
+  - name: FeatureMonitor
+    type: frser-sqlite-datasource
+    uid: sqlite-prod
+    access: proxy
+    jsonData:
+      path: /data/BH/monitor.db
+    editable: false
+
+  - name: DemoMonitor
+    type: frser-sqlite-datasource
+    uid: sqlite-demo
+    access: proxy
+    isDefault: true
+    jsonData:
+      path: /home/yusen/ashare_feature/monitoring/demo_monitor.db
+    editable: false

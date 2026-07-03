@@ -1,0 +1,405 @@
+{
+  "uid": "ashare-feature-monitoring",
+  "title": "A-Share Feature Monitoring",
+  "description": "Real-time feature pipeline monitoring: computation cost, symbol counts, null/inf stats, abandon events, feature statistics, and validation results.",
+  "tags": ["ashare", "feature", "monitoring"],
+  "timezone": "Asia/Shanghai",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "",
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "frser-sqlite-datasource",
+        "current": {
+          "selected": true,
+          "text": "FeatureMonitor",
+          "value": "sqlite-prod"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "label": "Data Source"
+      },
+      {
+        "name": "trade_date",
+        "type": "query",
+        "datasource": { "uid": "${datasource}" },
+        "query": "SELECT DISTINCT trade_date FROM bar_metrics ORDER BY trade_date DESC",
+        "refresh": 1,
+        "sort": 0,
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "label": "Trade Date"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "计算耗时趋势",
+      "description": "每个 bar 的特征计算耗时（秒），黄色/红色阈值线分别为 55s 和 58s",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "uid": "${datasource}" },
+      "targets": [
+        {
+          "rawQueryText": "SELECT trade_date || 'T' || bar_time || '+08:00' AS time, cost_seconds FROM bar_metrics WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "queryText": "SELECT trade_date || 'T' || bar_time || '+08:00' AS time, cost_seconds FROM bar_metrics WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "timeColumns": ["time"],
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "thresholdsStyle": { "mode": "line" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 55 },
+              { "color": "red", "value": 58 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "id": 2,
+      "title": "标的数量",
+      "description": "每个 bar 参与计算的股票数量",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "uid": "${datasource}" },
+      "targets": [
+        {
+          "rawQueryText": "SELECT trade_date || 'T' || bar_time || '+08:00' AS time, n_symbols FROM bar_metrics WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "queryText": "SELECT trade_date || 'T' || bar_time || '+08:00' AS time, n_symbols FROM bar_metrics WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "timeColumns": ["time"],
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Null / Inf 统计",
+      "description": "每个 bar 中全部特征列的 Null 和 Inf 单元格总数",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "uid": "${datasource}" },
+      "targets": [
+        {
+          "rawQueryText": "SELECT trade_date || 'T' || bar_time || '+08:00' AS time, n_null_cells AS 'Null Cells', n_inf_cells AS 'Inf Cells' FROM bar_metrics WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "queryText": "SELECT trade_date || 'T' || bar_time || '+08:00' AS time, n_null_cells AS 'Null Cells', n_inf_cells AS 'Inf Cells' FROM bar_metrics WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "timeColumns": ["time"],
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Null Cells" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Inf Cells" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "id": 4,
+      "title": "重试次数",
+      "description": "每个 bar 拉取数据的重试次数",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "uid": "${datasource}" },
+      "targets": [
+        {
+          "rawQueryText": "SELECT trade_date || 'T' || bar_time || '+08:00' AS time, retry_count FROM bar_metrics WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "queryText": "SELECT trade_date || 'T' || bar_time || '+08:00' AS time, retry_count FROM bar_metrics WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "timeColumns": ["time"],
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "purple" },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "barAlignment": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "id": 5,
+      "title": "放弃事件表",
+      "description": "因重试耗尽而放弃的 bar 详情",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 16 },
+      "datasource": { "uid": "${datasource}" },
+      "targets": [
+        {
+          "rawQueryText": "SELECT bar_time, retry_count AS retries, reason, created_at FROM abandon_events WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "queryText": "SELECT bar_time, retry_count AS retries, reason, created_at FROM abandon_events WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "放弃计数",
+      "description": "当日放弃 bar 总数",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "datasource": { "uid": "${datasource}" },
+      "targets": [
+        {
+          "rawQueryText": "SELECT COUNT(*) AS abandon_count FROM abandon_events WHERE trade_date = '${trade_date}'",
+          "queryText": "SELECT COUNT(*) AS abandon_count FROM abandon_events WHERE trade_date = '${trade_date}'",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "关键特征均值",
+      "description": "tracked features 的 mean_val 时序（按 feature_name 分组）",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "uid": "${datasource}" },
+      "targets": [
+        {
+          "rawQueryText": "SELECT trade_date || 'T' || bar_time || '+08:00' AS time, mean_val, feature_name FROM feature_stats WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "queryText": "SELECT trade_date || 'T' || bar_time || '+08:00' AS time, mean_val, feature_name FROM feature_stats WHERE trade_date = '${trade_date}' ORDER BY bar_time",
+          "timeColumns": ["time"],
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "lastNotNull"] }
+      },
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "feature_name",
+            "rowField": "time",
+            "valueField": "mean_val"
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "特征 Inf 计数",
+      "description": "各 tracked feature 当日 Inf 总量",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "uid": "${datasource}" },
+      "targets": [
+        {
+          "rawQueryText": "SELECT feature_name, SUM(inf_count) AS total_inf FROM feature_stats WHERE trade_date = '${trade_date}' GROUP BY feature_name ORDER BY total_inf DESC",
+          "queryText": "SELECT feature_name, SUM(inf_count) AS total_inf FROM feature_stats WHERE trade_date = '${trade_date}' GROUP BY feature_name ORDER BY total_inf DESC",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "xField": "feature_name",
+        "orientation": "horizontal",
+        "showValue": "always",
+        "legend": { "displayMode": "hidden" }
+      }
+    },
+    {
+      "id": 9,
+      "title": "一致性概览",
+      "description": "离线 vs 实时 mean_equal_ratio（越接近 1 越好）",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 32 },
+      "datasource": { "uid": "${datasource}" },
+      "targets": [
+        {
+          "rawQueryText": "SELECT mean_equal_ratio FROM validation_summary WHERE trade_date = '${trade_date}'",
+          "queryText": "SELECT mean_equal_ratio FROM validation_summary WHERE trade_date = '${trade_date}'",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 4,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.95 },
+              { "color": "green", "value": 0.99 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "一致性详情",
+      "description": "每个特征的离线/实时一致性指标，按 equal_ratio 升序排列（最差的在上面）",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 32 },
+      "datasource": { "uid": "${datasource}" },
+      "targets": [
+        {
+          "rawQueryText": "SELECT feature_name, equal_ratio, max_abs_diff, correlation, CASE WHEN is_known_divergent = 1 THEN 'Yes' ELSE 'No' END AS known_divergent FROM validation_columns WHERE trade_date = '${trade_date}' ORDER BY equal_ratio ASC",
+          "queryText": "SELECT feature_name, equal_ratio, max_abs_diff, correlation, CASE WHEN is_known_divergent = 1 THEN 'Yes' ELSE 'No' END AS known_divergent FROM validation_columns WHERE trade_date = '${trade_date}' ORDER BY equal_ratio ASC",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "equal_ratio" },
+            "properties": [
+              { "id": "unit", "value": "percentunit" },
+              { "id": "decimals", "value": 4 },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "red", "value": null },
+                    { "color": "yellow", "value": 0.95 },
+                    { "color": "green", "value": 0.99 }
+                  ]
+                }
+              },
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "equal_ratio", "desc": false }]
+      }
+    }
+  ],
+  "time": {
+    "from": "now-1d",
+    "to": "now"
+  }
+}
